@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Circle of Fifths & Fretboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #1e1e1e; color: #ffffff;
+      display: flex; flex-direction: column; gap: 40px; 
+      justify-content: center; align-items: center;
+      min-height: 100vh; padding: 40px 0;
+    }
+
+    .circle-container {
+      position: relative; width: 500px; height: 500px;
+      border-radius: 50%; border: 2px solid #444;
+      display: flex; justify-content: center; align-items: center;
+      background: radial-gradient(circle, #2a2a2a 40%, #1e1e1e 100%);
+    }
+
+    .center-info {
+      position: relative; width: 170px; height: 170px;
+      background-color: #333; border-radius: 50%; display: flex;
+      flex-direction: column; justify-content: center; align-items: center;
+      text-align: center; box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      z-index: 10; transition: all 0.3s ease;
+    }
+    .center-info h2 { font-size: 2rem; margin-bottom: 5px; color: #ff9800; }
+    .center-info p { font-size: 1rem; color: #cccccc; margin: 3px 0; }
+
+    .key-slice {
+      position: absolute; width: 60px; height: 60px;
+      background-color: #444; border: 2px solid #555; border-radius: 50%;
+      display: flex; justify-content: center; align-items: center;
+      font-size: 1.2rem; font-weight: bold; cursor: pointer;
+      transition: all 0.2s ease; user-select: none;
+      transform: translate(var(--x), var(--y));
+    }
+    .key-slice:hover { background-color: #ff9800; color: #1e1e1e; border-color: #ff9800; transform: translate(var(--x), var(--y)) scale(1.15); }
+    .key-slice.active { background-color: #ff9800; color: #1e1e1e; border-color: #ffffff; box-shadow: 0 0 15px #ff9800; transform: translate(var(--x), var(--y)) scale(1.15); }
+
+    .minor-slice {
+      position: absolute; width: 45px; height: 45px;
+      background-color: #333; border: 2px solid #444; border-radius: 50%;
+      display: flex; justify-content: center; align-items: center;
+      font-size: 0.95rem; color: #bbb; cursor: pointer;
+      transition: all 0.2s ease; user-select: none;
+      transform: translate(var(--x), var(--y));
+    }
+    .minor-slice:hover { background-color: #ff9800; color: #1e1e1e; border-color: #ff9800; transform: translate(var(--x), var(--y)) scale(1.15); }
+    .minor-slice.active { background-color: #ff9800; color: #1e1e1e; border-color: #ffffff; box-shadow: 0 0 15px #ff9800; transform: translate(var(--x), var(--y)) scale(1.15); }
+
+    /* --- AKORT (TUNING) MENÜSÜ TASARIMI --- */
+    .tuning-container {
+      background-color: #333; padding: 15px 25px; border-radius: 8px;
+      border: 2px solid #444; font-size: 1.1rem; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+      display: flex; flex-direction: column; align-items: center; gap: 15px;
+    }
+    #tuning-select {
+      background-color: #1e1e1e; color: #ff9800; border: 1px solid #555;
+      padding: 5px 10px; font-size: 1rem; border-radius: 4px; outline: none; cursor: pointer;
+    }
+    
+    /* ÖZEL AKORT PANELI (Gizlenebilir Bölüm) */
+    #custom-tuning-panel {
+      display: none; /* JavaScript ile "Özel" seçildiğinde 'flex' yapılacak */
+      gap: 15px; 
+      justify-content: center; 
+      flex-wrap: wrap;
+      background: #222;
+      padding: 10px 15px;
+      border-radius: 6px;
+      border: 1px dashed #666;
+    }
+    
+    /* Özel Akort içindeki her bir telin seçicisi */
+    .custom-string-group {
+      display: flex; flex-direction: column; align-items: center; font-size: 0.9rem;
+    }
+    .custom-string-select {
+      background-color: #1e1e1e; color: #fff; border: 1px solid #555;
+      padding: 3px; margin-top: 5px; border-radius: 3px; cursor: pointer;
+    }
+
+    /* --- FRETBOARD (KLAVYE) TASARIMI --- */
+    .fretboard-container {
+      width: 90vw; max-width: 1100px; background-color: #2a2a2a;
+      padding: 10px 15px 25px 15px; border-radius: 8px;
+      border: 2px solid #444; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    }
+    .string { display: flex; height: 32px; position: relative; align-items: center; }
+    .string::before { content: ''; position: absolute; width: 100%; background: #888; z-index: 1; }
+    .fret { flex: 1; height: 100%; border-right: 3px solid #777; display: flex; justify-content: center; align-items: center; position: relative; z-index: 2; }
+    .fret:first-child { flex: 0.4; border-right: 8px solid #ccc; background: #1a1a1a; }
+    
+    .note-marker {
+      width: 22px; height: 22px; background: #ff9800; border-radius: 50%;
+      display: flex; justify-content: center; align-items: center;
+      color: #1e1e1e; font-size: 11px; font-weight: bold;
+      opacity: 0; transition: opacity 0.1s; pointer-events: none;
+    }
+    .note-marker.visible { opacity: 1; }
+    .note-marker.root { background: #ffffff !important; border: 2px solid #ff9800; box-shadow: 0 0 10px #ffffff; transform: scale(1.15); }
+    .fret-number { position: absolute; bottom: -20px; width: 100%; text-align: center; color: #777; font-size: 14px; }
+  </style>
+</head>
+<body>
+  
+  <div class="circle-container" id="circle-container">
+    <div class="center-info" id="info-panel">
+      <h2 id="selected-key">C</h2>
+      <p id="relative-minor">Am</p>
+      <p id="accidentals">Arıza Yok</p>
+    </div>
+  </div>
+
+  <!-- AKORT (TUNING) BÖLÜMÜ -->
+  <div class="tuning-container">
+    <div>
+      <label for="tuning-select">Akort Sistemi: </label>
+      <select id="tuning-select">
+        <option value="standard">Standart (E-A-D-G-B-E)</option>
+        <option value="dropD">Drop D (D-A-D-G-B-E)</option>
+        <option value="halfStep">Half-Step Down (Eb-Ab-Db-Gb-Bb-Eb)</option>
+        <option value="dadgad">DADGAD (D-A-D-G-A-D)</option>
+        <option value="custom">Özel Akort Oluştur...</option>
+      </select>
+    </div>
+
+    <!-- ÖZEL AKORT PANELI (Sadece "Özel Akort Oluştur" seçilince görünür) -->
+    <div id="custom-tuning-panel">
+      <!-- JavaScript buraya 6 adet select menüsü çizecek -->
+    </div>
+  </div>
+
+  <div class="fretboard-container">
+    <div id="fretboard"></div>
+  </div>
+
+  <script>
+    // --- TEMEL VERİLER ---
+    const chromaticSharps = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
+    const chromaticFlats  = ["C", "D♭", "D", "E♭", "E", "F", "G♭", "G", "A♭", "A", "B♭", "B"];
+    
+     openStrings = [4, 11, 7, 2, 9, 4]; // Aktif akort sistemi (Başlangıç: Standart)
+    const inlayFrets = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24]; 
+    
+    const fretboardEl = document.getElementById('fretboard');
+    const fretElements = []; 
+    
+    // --- STATE (DURUM) YÖNETİMİ ---
+    let currentCircleIndex = 0;    
+    let currentClickedType = 'major'; 
+    let currentSign = '';          
+
+    // --- ÖZEL AKORT (CUSTOM TUNING) ARAYÜZÜNÜ OLUŞTURMA ---
+    const customPanel = document.getElementById('custom-tuning-panel');
+    
+    // Menü etiketleri kalından inceye (6 -> 1)
+    const stringNames = ["6. Tel (Kalın)", "5. Tel", "4. Tel", "3. Tel", "2. Tel", "1. Tel (İnce)"];
+    
+    // Başlangıç değerleri KALINDAN İNCEYE (E=4, A=9, D=2, G=7, B=11, e=4) olmalı!
+    const defaultCustomValues = [4, 9, 2, 7, 11, 4]; 
+    
+    // Menüyü temizle (Üst üste binmeyi önlemek için)
+    customPanel.innerHTML = '';
+
+    stringNames.forEach((name, idx) => {
+      const groupDiv = document.createElement('div');
+      groupDiv.className = 'custom-string-group';
+      
+      const label = document.createElement('label');
+      label.innerText = name;
+      
+      const select = document.createElement('select');
+      select.className = 'custom-string-select';
+      
+      chromaticSharps.forEach((noteName, noteIdx) => {
+        const option = document.createElement('option');
+        option.value = noteIdx;
+        option.innerText = noteName;
+        // Kalından inceye belirlediğimiz dizilişi burada seçili yap
+        if(noteIdx === defaultCustomValues[idx]) option.selected = true;
+        select.appendChild(option);
+      });
+
+      select.addEventListener('change', applyCustomTuning);
+
+      groupDiv.appendChild(label);
+      groupDiv.appendChild(select);
+      customPanel.appendChild(groupDiv);
+    });
+
+    // --- ÖZEL AKORDU UYGULAMA FONKSİYONU ---
+    function applyCustomTuning() {
+      const customSelects = document.querySelectorAll('.custom-string-select');
+      
+      // Kullanıcı menüde seçimini Kalından İnceye yapıyor. 
+      // Klavyeyi çizen algoritma ise İnce telden (1. telden) çizmeye başlıyor.
+      // Eşleşmenin hatasız olması için okunan değeri 'reverse()' ile tersine çeviriyoruz.
+      const newTuning = Array.from(customSelects).map(select => parseInt(select.value)).reverse();
+      
+      openStrings = newTuning;
+      
+      openStrings.forEach((openNoteIndex, stringIndex) => {
+        fretElements[stringIndex].forEach((marker, fret) => {
+          marker.dataset.noteIndex = (openNoteIndex + fret) % 12;
+        });
+      });
+      
+      updateFretboard(currentCircleIndex, currentClickedType, currentSign);
+    }
+
+    // --- ANA AKORT MENÜSÜ DİNLEYİCİSİ ---
+    const tunings = {
+      standard: [4, 11, 7, 2, 9, 4],    
+      dropD:    [4, 11, 7, 2, 9, 2],    
+      halfStep: [3, 10, 6, 1, 8, 3],    
+      dadgad:   [2, 9, 7, 2, 9, 2]      
+    };
+
+    const tuningSelect = document.getElementById('tuning-select');
+    tuningSelect.addEventListener('change', (e) => {
+      const selectedTuning = e.target.value;
+      
+      // Eğer kullanıcı "Özel Akort Oluştur"u seçtiyse
+      if (selectedTuning === 'custom') {
+        // Özel paneli görünür yap
+        customPanel.style.display = 'flex';
+        // Özel paneldeki güncel ayarları klavyeye uygula
+        applyCustomTuning(); 
+      } 
+      // Hazır (Preset) ayarlardan birini seçtiyse
+      else {
+        // Özel paneli gizle
+        customPanel.style.display = 'none';
+        
+        // Seçilen hazır dizilimi sisteme aktar
+        openStrings = tunings[selectedTuning]; 
+
+        // Matematiksel indeksleri güncelle (Artık bu kodu ezberledik)
+        openStrings.forEach((openNoteIndex, stringIndex) => {
+          fretElements[stringIndex].forEach((marker, fret) => {
+            marker.dataset.noteIndex = (openNoteIndex + fret) % 12;
+          });
+        });
+
+        // Yeniden boya
+        updateFretboard(currentCircleIndex, currentClickedType, currentSign);
+      }
+    });
+    
+    // --- KLAVYE (DOM) İLK OLUŞTURMA ---
+    openStrings.forEach((openNoteIndex, stringIndex) => {
+      const stringDiv = document.createElement('div');
+      stringDiv.className = 'string';
+      const stringFrets = [];
+      
+      for (let fret = 0; fret <= 24; fret++) {
+        const fretDiv = document.createElement('div');
+        fretDiv.className = 'fret';
+        
+        const noteIndex = (openNoteIndex + fret) % 12; 
+        const marker = document.createElement('div');
+        marker.className = 'note-marker';
+        marker.dataset.noteIndex = noteIndex;
+        fretDiv.appendChild(marker);
+
+        if (stringIndex === 5 && inlayFrets.includes(fret)) {
+          const inlay = document.createElement('div');
+          inlay.className = 'fret-number';
+          inlay.innerText = `${fret}`;
+          fretDiv.appendChild(inlay);
+        }
+
+        stringDiv.appendChild(fretDiv);
+        stringFrets.push(marker);
+      }
+      fretboardEl.appendChild(stringDiv);
+      fretElements.push(stringFrets);
+    });
+
+    // --- KLAVYE BOYAMA ALGORİTMASI ---
+    function updateFretboard(circleIndex, clickedType, sign) {
+      const majorRootIndex = (circleIndex * 7) % 12; 
+      const minorRootIndex = (majorRootIndex + 9) % 12;
+      const activeRootIndex = (clickedType === 'major') ? majorRootIndex : minorRootIndex;
+
+      const scaleIntervals = [0, 2, 4, 5, 7, 9, 11];
+      const currentScaleIndices = scaleIntervals.map(interval => (majorRootIndex + interval) % 12);
+      const namesArray = (sign === '♭') ? chromaticFlats : chromaticSharps;
+
+      fretElements.forEach(stringFrets => {
+        stringFrets.forEach(marker => {
+          const noteIdx = parseInt(marker.dataset.noteIndex);
+          marker.innerText = namesArray[noteIdx]; 
+
+          if (currentScaleIndices.includes(noteIdx)) {
+            marker.classList.add('visible');
+            if (noteIdx === activeRootIndex) marker.classList.add('root');
+            else marker.classList.remove('root');
+          } else {
+            marker.classList.remove('visible');
+            marker.classList.remove('root');
+          }
+        });
+      });
+    }
+
+    // --- ÇEMBER VERİLERİ VE OLAYLARI ---
+    const circleData = [
+      { id: 0, major: "C", minor: "Am", accidentals: 0, sign: "" },
+      { id: 1, major: "G", minor: "Em", accidentals: 1, sign: "♯" },
+      { id: 2, major: "D", minor: "Bm", accidentals: 2, sign: "♯" },
+      { id: 3, major: "A", minor: "F♯m", accidentals: 3, sign: "♯" },
+      { id: 4, major: "E", minor: "C♯m", accidentals: 4, sign: "♯" },
+      { id: 5, major: "B", minor: "G♯m", accidentals: 5, sign: "♯" },
+      { id: 6, major: "F♯", minor: "D♯m", accidentals: 6, sign: "♯" },
+      { id: 7, major: "D♭", minor: "B♭m", accidentals: 5, sign: "♭" },
+      { id: 8, major: "A♭", minor: "Fm", accidentals: 4, sign: "♭" },
+      { id: 9, major: "E♭", minor: "Cm", accidentals: 3, sign: "♭" },
+      { id: 10, major: "B♭", minor: "Gm", accidentals: 2, sign: "♭" },
+      { id: 11, major: "F", minor: "Dm", accidentals: 1, sign: "♭" }
+    ];
+
+    const container = document.getElementById('circle-container');
+    const majorRadius = 200; 
+    const minorRadius = 135; 
+
+    let activeMajorElement = null;
+    let activeMinorElement = null;
+
+    circleData.forEach((item, index) => {
+      const angle = (index * 30) - 90; 
+      const angleRad = angle * (Math.PI / 180);
+      
+      const majorDiv = document.createElement('div');
+      majorDiv.className = 'key-slice';
+      majorDiv.innerText = item.major;
+      majorDiv.style.setProperty('--x', `${majorRadius * Math.cos(angleRad)}px`);
+      majorDiv.style.setProperty('--y', `${majorRadius * Math.sin(angleRad)}px`);
+
+      const minorDiv = document.createElement('div');
+      minorDiv.className = 'minor-slice';
+      minorDiv.innerText = item.minor;
+      minorDiv.style.setProperty('--x', `${minorRadius * Math.cos(angleRad)}px`);
+      minorDiv.style.setProperty('--y', `${minorRadius * Math.sin(angleRad)}px`);
+      
+      const updateCenterPanel = (clickedType) => {
+        if (activeMajorElement) activeMajorElement.classList.remove('active');
+        if (activeMinorElement) activeMinorElement.classList.remove('active');
+        
+        majorDiv.classList.add('active');
+        minorDiv.classList.add('active');
+        activeMajorElement = majorDiv;
+        activeMinorElement = minorDiv;
+
+        if (clickedType === 'major') {
+          document.getElementById('selected-key').innerText = `${item.major} Major`;
+          document.getElementById('relative-minor').innerText = `Relative Minor: ${item.minor.split('m').join('')}`;
+        } else {
+          
+          document.getElementById('selected-key').innerText = `${item.minor.split('m').join('')} Minor`;
+          document.getElementById('relative-minor').innerText = `Relative Major: ${item.major}`;
+        }
+
+        document.getElementById('accidentals').innerText = item.accidentals === 0 
+          ? 'Arıza Yok' 
+          : `${item.accidentals} ${item.sign} alır`;
+
+        currentCircleIndex = index;
+        currentClickedType = clickedType;
+        currentSign = item.sign;
+        
+        updateFretboard(index, clickedType, item.sign);
+      };
+
+      majorDiv.addEventListener('click', () => updateCenterPanel('major'));
+      minorDiv.addEventListener('click', () => updateCenterPanel('minor'));
+      
+      if (index === 0) updateCenterPanel('major');
+
+      container.appendChild(majorDiv);
+      container.appendChild(minorDiv);
+    });
+  </script>
+</body>
+</html>
