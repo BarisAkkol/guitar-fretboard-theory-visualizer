@@ -17,10 +17,3 @@ This project is a single-page, browser-based web application designed to visuali
 * CSS3 (Flexbox, CSS Variables)
 * Vanilla JavaScript (ES6+)
 
-## Installation and Usage
-
-There are no dependencies or server configurations required. It runs purely on the client side.
-
-1. Clone the repository to your local machine:
-   ```bash
-   git clone [https://github.com/YOUR_USERNAME/circle-of-fifths-fretboard.git](https://github.com/YOUR_USERNAME/circle-of-fifths-fretboard.git)
